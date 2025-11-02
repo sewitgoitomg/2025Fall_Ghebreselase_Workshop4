@@ -30,6 +30,9 @@ public class UserInterface {
             int choice = scanner.nextInt();
             scanner.nextLine();
             switch (choice) {
+                case 0:
+                    processSellLeaseRequest();
+                    break;
                 case 1:
                     processGetByPriceRequest();
                     break;
@@ -69,10 +72,13 @@ public class UserInterface {
         scanner.close();
     }
 
+
+
     private void displayMenu() {
         System.out.println("\n========================================");
         System.out.println("      " + dealership.getName());
         System.out.println("========================================");
+        System.out.println("0 - Sell/Lease a vehicle");
         System.out.println("1 - Find vehicles by price range");
         System.out.println("2 - Find vehicles by make/model");
         System.out.println("3 - Find vehicles by year range");
@@ -86,6 +92,113 @@ public class UserInterface {
         System.out.println("========================================");
         System.out.print("Enter your choice: ");
     }
+
+    private void processSellLeaseRequest() {
+        System.out.println("\n--- Sell/Lease a Vehicle ---");
+
+        //get by vin and find vehicle
+        System.out.println("Enter Vin no:  ");
+        int vinNo = scanner.nextInt();
+        scanner.nextLine();
+
+        Vehicle vehicle = null;
+        for (Vehicle v : this.dealership.getVehicles()) {
+            if (v.getVin() == vinNo) {
+                vehicle = v;
+                break;
+            }
+        }
+        if (vehicle == null) {
+            System.out.println("Invalid Vin no. provided. Please try again.");
+            System.out.println("Press enter to continue.");
+            scanner.nextLine();
+            return;
+        }
+        //after getting the vin show the vehicle info
+        System.out.println("\n" + vehicle.getYear() + " " + vehicle.getMake() + " " + vehicle.getModel());
+        System.out.println("Price: $" + vehicle.getPrice());
+
+        //Ask user customer info
+        System.out.println("\nCustomer Name: ");
+        String customerName = scanner.nextLine();
+        System.out.println("Customer Email: ");
+        String email = scanner.nextLine();
+
+        //get date
+        String date = java.time.LocalDate.now().format
+                (java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
+
+
+        //Ask user if sale or lease?
+        System.out.println("\nSelect transaction type:");
+        System.out.println("1 - Sale");
+        System.out.println("2 - Lease");
+        System.out.println("Enter choice: ");
+        int transactionType = scanner.nextInt();
+        scanner.nextLine();
+
+        Contract contract = null;
+        if (transactionType==1) {
+            contract = handleSale(date, customerName, email, vehicle);
+        } else if (transactionType==2) {
+            contract = handleLease(date, customerName, email, vehicle);
+        }else {
+            System.out.println("Invalid transaction type. Please try again.");
+            System.out.println("Please Enter to continue...");
+            scanner.nextLine();
+            return;
+        }
+
+        if (contract != null) {
+            // save contract to file
+            ContractFileManager.saveContract(contract);
+
+            // remove vehicle from inventory
+            dealership.removeVehicle(vehicle);
+
+            // save updated inventory
+            DealershipFileManager.saveDealership(dealership);
+
+            System.out.println("\nContract saved!");
+            System.out.println(" Vehicle removed from inventory!");
+        }
+
+        System.out.println("\nPress Enter to continue...");
+        scanner.nextLine();
+
+    }
+    private Contract handleSale(String date, String name, String email, Vehicle vehicle) {
+        System.out.println("Finance? (yes or no): ");
+        String choice = scanner.nextLine().toLowerCase();
+        boolean isFinanced= choice.equals("yes");
+
+        SalesContract contract = new SalesContract(date,name,email,vehicle,isFinanced);
+
+        System.out.println( "\nTotal : $ " +contract.getTotalPrice());
+        System.out.printf("\nMonthly: $%.2f\n", contract.getMonthlyPayment());
+        return contract;
+    }
+
+    private Contract handleLease(String date, String name, String email, Vehicle vehicle) {
+
+        int currentYear = java.time.LocalDate.now().getYear();
+        int age= currentYear-vehicle.getYear();
+
+        if(age>3) {
+            System.out.println("Error the vehicle is too old to lease (Must be 3 years or newer");
+            return null;
+        }
+            LeaseContract contract = new LeaseContract(date,name,email,vehicle);
+
+        System.out.printf("\nTotal: $%.2f\n", contract.getTotalPrice());
+        System.out.printf("Monthly: $%.2f\n", contract.getMonthlyPayment());
+
+
+
+        return contract;
+
+    }
+
 
     private void displayVehicles(List<Vehicle> vehicles) {
         if (vehicles.isEmpty()) {

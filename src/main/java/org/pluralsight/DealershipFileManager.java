@@ -81,7 +81,7 @@ public static void saveDealership(Dealership dealership) {
                 dealership.getAddress(),
                 dealership.getPhone());
         fw.write(headerRow);
-        fw.write("\n");  // newline after header
+        fw.write("\n");
 
         // Write each vehicle
         for (Vehicle vehicle : dealership.getAllVehicles()) {
