@@ -91,4 +91,23 @@ private boolean isFinanced;
     public void setFinanced(boolean financed) {
         isFinanced = financed;
     }
+    public int getVin() {
+        return getVehicleSold().getVin();
+    }
+
+    public String getDate() {
+        return getDateOfContract();
+    }
+
+    public double getPrice() {
+        return getVehicleSold().getPrice();
+    }
+
+    public double getSalesTax() {
+        return salesTaxAmount;
+    }
+
+    public boolean isFinanceOption() {
+        return isFinanced;
+    }
 }

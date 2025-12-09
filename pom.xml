@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.pluralsight</groupId>
-    <artifactId>2025Fall_Ghebreselase_Workshop4</artifactId>
+    <artifactId>2025Fall_Ghebreselase_Workshop5</artifactId>
     <version>1.0-SNAPSHOT</version>
 
     <properties>
@@ -14,6 +14,12 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
     <dependencies>
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <version>9.1.0</version>
+        </dependency>
+
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>

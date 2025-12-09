@@ -4,22 +4,25 @@ import java.util.List;
 import java.util.Scanner;
 
 public class UserInterface {
-    private Dealership dealership;
+
+    private VehicleDao vehicleDao;
+    private SalesDao salesDao;
+    private LeaseDao leaseDao;
+    private String dealershipName;
+
     private static Scanner scanner = new Scanner(System.in);
 
-    public UserInterface() {
-        init();
+
+    public UserInterface(String dbUrl, String dbUser, String dbPass) {
+        init(dbUrl, dbUser, dbPass);
     }
 
-    private void init() {
-        this.dealership = DealershipFileManager.getDealership();
+    private void init(String dbUrl, String dbUser, String dbPass) {
 
-        if (this.dealership == null) {
-            System.out.println("ERROR: The dealership data file is missing or malformed");
-            System.out.println("Please ensure 'inventory.csv' exists and has the correct format");
-            System.out.println("The application cannot continue.");
-            System.exit(1);
-        }
+        this.vehicleDao = new VehicleDao(dbUrl, dbUser, dbPass);
+        this.salesDao = new SalesDao(dbUrl, dbUser, dbPass);
+        this.leaseDao = new LeaseDao(dbUrl, dbUser, dbPass);
+        this.dealershipName = "D & B Used Cars";
     }
 
     public void display() {
@@ -72,11 +75,9 @@ public class UserInterface {
         scanner.close();
     }
 
-
-
     private void displayMenu() {
         System.out.println("\n========================================");
-        System.out.println("      " + dealership.getName());
+        System.out.println("      " + dealershipName);
         System.out.println("========================================");
         System.out.println("0 - Sell/Lease a vehicle");
         System.out.println("1 - Find vehicles by price range");
@@ -101,24 +102,21 @@ public class UserInterface {
         int vinNo = scanner.nextInt();
         scanner.nextLine();
 
-        Vehicle vehicle = null;
-        for (Vehicle v : this.dealership.getVehicles()) {
-            if (v.getVin() == vinNo) {
-                vehicle = v;
-                break;
-            }
-        }
+
+        Vehicle vehicle = vehicleDao.findVehicleByVin(vinNo);
+
         if (vehicle == null) {
             System.out.println("Invalid Vin no. provided. Please try again.");
             System.out.println("Press enter to continue.");
             scanner.nextLine();
             return;
         }
-        //after getting the vin show the vehicle info
+
+
         System.out.println("\n" + vehicle.getYear() + " " + vehicle.getMake() + " " + vehicle.getModel());
         System.out.println("Price: $" + vehicle.getPrice());
 
-        //Ask user customer info
+
         System.out.println("\nCustomer Name: ");
         String customerName = scanner.nextLine();
         System.out.println("Customer Email: ");
@@ -127,7 +125,6 @@ public class UserInterface {
         //get date
         String date = java.time.LocalDate.now().format
                 (java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
-
 
         //Ask user if sale or lease?
         System.out.println("\nSelect transaction type:");
@@ -150,23 +147,24 @@ public class UserInterface {
         }
 
         if (contract != null) {
-            // save contract to file
-            ContractFileManager.saveContract(contract);
 
-            // remove vehicle from inventory
-            dealership.removeVehicle(vehicle);
+            if (contract instanceof SalesContract) {
+                salesDao.addSalesContract((SalesContract) contract);
+            } else if (contract instanceof LeaseContract) {
+                leaseDao.addLeaseContract((LeaseContract) contract);
+            }
 
-            // save updated inventory
-            DealershipFileManager.saveDealership(dealership);
+            // Remove vehicle from database
+            vehicleDao.removeVehicle(vehicle.getVin());
 
             System.out.println("\nContract saved!");
-            System.out.println(" Vehicle removed from inventory!");
+            System.out.println("Vehicle removed from inventory!");
         }
 
         System.out.println("\nPress Enter to continue...");
         scanner.nextLine();
-
     }
+
     private Contract handleSale(String date, String name, String email, Vehicle vehicle) {
         System.out.println("Finance? (yes or no): ");
         String choice = scanner.nextLine().toLowerCase();
@@ -180,7 +178,6 @@ public class UserInterface {
     }
 
     private Contract handleLease(String date, String name, String email, Vehicle vehicle) {
-
         int currentYear = java.time.LocalDate.now().getYear();
         int age= currentYear-vehicle.getYear();
 
@@ -188,17 +185,14 @@ public class UserInterface {
             System.out.println("Error the vehicle is too old to lease (Must be 3 years or newer");
             return null;
         }
-            LeaseContract contract = new LeaseContract(date,name,email,vehicle);
+
+        LeaseContract contract = new LeaseContract(date,name,email,vehicle);
 
         System.out.printf("\nTotal: $%.2f\n", contract.getTotalPrice());
         System.out.printf("Monthly: $%.2f\n", contract.getMonthlyPayment());
 
-
-
         return contract;
-
     }
-
 
     private void displayVehicles(List<Vehicle> vehicles) {
         if (vehicles.isEmpty()) {
@@ -239,7 +233,8 @@ public class UserInterface {
     }
 
     private void processAllVehiclesRequest() {
-        List<Vehicle> vehicles = dealership.getAllVehicles();
+
+        List<Vehicle> vehicles = vehicleDao.getAllVehicles();
         displayVehicles(vehicles);
     }
 
@@ -250,7 +245,8 @@ public class UserInterface {
         double max = scanner.nextDouble();
         scanner.nextLine();
 
-        List<Vehicle> vehicles = dealership.getVehiclesByPrice(min, max);
+
+        List<Vehicle> vehicles = vehicleDao.searchByPriceRange(min, max);
         displayVehicles(vehicles);
     }
 
@@ -260,7 +256,8 @@ public class UserInterface {
         System.out.print("Enter model: ");
         String model = scanner.nextLine();
 
-        List<Vehicle> vehicles = dealership.getVehiclesByMakeModel(make, model);
+
+        List<Vehicle> vehicles = vehicleDao.searchByMakeModel(make, model);
         displayVehicles(vehicles);
     }
 
@@ -271,7 +268,8 @@ public class UserInterface {
         int max = scanner.nextInt();
         scanner.nextLine();
 
-        List<Vehicle> vehicles = dealership.getVehiclesByYear(min, max);
+
+        List<Vehicle> vehicles = vehicleDao.searchByYearRange(min, max);
         displayVehicles(vehicles);
     }
 
@@ -279,7 +277,8 @@ public class UserInterface {
         System.out.print("Enter color: ");
         String color = scanner.nextLine();
 
-        List<Vehicle> vehicles = dealership.getVehiclesByColor(color);
+
+        List<Vehicle> vehicles = vehicleDao.searchByColor(color);
         displayVehicles(vehicles);
     }
 
@@ -290,7 +289,8 @@ public class UserInterface {
         double max = scanner.nextDouble();
         scanner.nextLine();
 
-        List<Vehicle> vehicles = dealership.getVehiclesByMileage(min, max);
+
+        List<Vehicle> vehicles = vehicleDao.searchByMileageRange((int)min, (int)max);
         displayVehicles(vehicles);
     }
 
@@ -298,7 +298,8 @@ public class UserInterface {
         System.out.print("Enter vehicle type (car/truck/SUV/van): ");
         String type = scanner.nextLine();
 
-        List<Vehicle> vehicles = dealership.getVehiclesByType(type);
+
+        List<Vehicle> vehicles = vehicleDao.searchByType(type);
         displayVehicles(vehicles);
     }
 
@@ -332,9 +333,9 @@ public class UserInterface {
         scanner.nextLine();
 
         Vehicle vehicle = new Vehicle(vin, year, make, model, type, color, odometer, price);
-        dealership.addVehicle(vehicle);
 
-        DealershipFileManager.saveDealership(dealership);
+
+        vehicleDao.addVehicle(vehicle);
 
         System.out.println("\nVehicle added successfully!");
         System.out.println("Press Enter to continue...");
@@ -346,17 +347,11 @@ public class UserInterface {
         int vin = scanner.nextInt();
         scanner.nextLine();
 
-        Vehicle remove = null;
-        for (Vehicle v : dealership.getAllVehicles()) {
-            if (v.getVin() == vin) {
-                remove = v;
-                break;
-            }
-        }
 
-        if (remove != null) {
-            dealership.removeVehicle(remove);
-            DealershipFileManager.saveDealership(dealership);
+        Vehicle vehicle = vehicleDao.findVehicleByVin(vin);
+
+        if (vehicle != null) {
+            vehicleDao.removeVehicle(vin);
             System.out.println("Vehicle removed successfully!");
         } else {
             System.out.println("Vehicle with VIN " + vin + " not found.");

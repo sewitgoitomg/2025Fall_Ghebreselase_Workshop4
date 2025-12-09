@@ -51,4 +51,15 @@ public class LeaseContract extends Contract {
     public void setLeaseFee(double leaseFee) {
         this.leaseFee = leaseFee;
     }
+    public int getVin() {
+        return getVehicleSold().getVin();
+    }
+
+    public String getDate() {
+        return getDateOfContract();
+    }
+
+    public double getPrice() {
+        return getVehicleSold().getPrice();
+    }
 }
